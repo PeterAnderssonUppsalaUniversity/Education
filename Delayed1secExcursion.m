@@ -22,7 +22,7 @@ BetaEff = 0.006;
 Lambda = 0.08; 
 
 % timespan [s]
-t= 0:0.01:30 ; 
+t= 0:0.0001:1 ; 
 
 % equillibrium initial conditions
 Ni = [Lambda*l/BetaEff , 1] ;
@@ -31,12 +31,12 @@ Ni = Ni/sum(Ni);
 % ODE function, y' = f(t,y)  (y(1) is the prompt neutron population
 % and y(2) is the delayed neutron population.)
 testfunc = @(T,y) PointKineticDelayed(T,y, k,l,BetaEff, Lambda) ; 
-[t,N] = ode15s(testfunc, t, Ni )
+[t,N] = ode15s(testfunc, t, Ni );
 
 %Normalized Power - Assumed proportional to neutron population
-P = N(:,1) + Lambda*N(:,2);
+P = N(:,1)/l + Lambda*N(:,2);
 
 figure
-plot(t, N(:,2))
+plot(t, P/P(1))
 xlabel('Time [s]')
 ylabel('P_{th} / P_{th,0}')
