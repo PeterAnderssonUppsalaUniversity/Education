@@ -6,7 +6,7 @@ BurnTime = 200;
 DecayTime = 0;
 
 %time in hours, before (neg) and after (pos) reactor stoppage
-t =  [ -24*BurnTime :1: DecayTime];
+t =  [ -24*BurnTime :1: DecayTime*24];
 
  %Power  W per kg
 PowLev = 0.6E4; % 0.3E4;  
