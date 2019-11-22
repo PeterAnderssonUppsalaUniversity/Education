@@ -1,10 +1,10 @@
 % Reactor Dynamics execution script
 
 % timespan [s]
-t= 0:.01:5 ; 
+t= 0:.01:500 ; 
 
 % R0 (reactivity insertion) [unitless]
-R0 = 220E-5;
+R0 = 100E-5;
 
 % Reactivity feedbacks
 af=  -5E-5; % -1 pcm/K (just picked a number)
