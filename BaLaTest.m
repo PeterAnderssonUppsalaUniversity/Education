@@ -1,15 +1,15 @@
 
 % Irradiation time in days
-BurnTime = 200;
+BurnTime = 365*5;
 
-% Cooling time after end of operation
-DecayTime = 0;
+% Cooling time in days after end of operation
+DecayTime = 365*3;
 
 %time in hours, before (neg) and after (pos) reactor stoppage
 t =  [ -24*BurnTime :1: DecayTime*24];
 
  %Power  W per kg
-PowLev = 0.6E4; % 0.3E4;  
+PowLev = 4E4
 Power  = PowLev* [ ones(length(find(t<0)),1) ; zeros(length(find(t>=0)),1)]; % PowLev * [ones(9000,1) ;zeros(1000,1)] ; %power history
 
 %preallocationg barium and lantanum and cesium concentrations and burnup
@@ -36,7 +36,7 @@ lambdaCs = log(2) / (30.08*365*24) % /h
 %running irradiation and decay
 for i = 2:length(t)
     
-   BU(i) = BU(i-1) + Power(i) * 1 / 1E6 ; % MWd/kg
+   BU(i) = BU(i-1) + Power(i) /24 / 1E6 ; % MWd/kg
     
    % fission rate % fissions per kg and hour
    FR = 3600 * Power(i) / ( 200E6 * 1.6E-19) ; 
@@ -70,21 +70,15 @@ plot( t, la, 'r')
 plot( t, cs, 'k') 
 xlabel('Time after end of operation[h]')
 ylabel('Concentration [atoms/kg]')
-    
-
 legend({'Ba-140', 'Zr-95', 'La-140', 'Cs-137'})
 
 
 figure()
-plot(t, ba*lambdaBa/(24*3600) , 'b')
+plot(t, ba*lambdaBa/3600 , 'b')
 hold on 
-plot(t, zr*lambdaZr/(24*3600), 'c')
-plot( t, la*lambdaLa/(24*3600), 'r')
-plot( t, cs*lambdaCs/(24*3600), 'k') 
+plot(t, zr*lambdaZr/3600, 'c')
+plot( t, la*lambdaLa/3600, 'r')
+plot( t, cs*lambdaCs/3600, 'k') 
 xlabel('Time after end of operation [h]')
 ylabel('Activity [Bq/kg]')
-%set(gca,'YScale', 'log')
-
-    
-
 legend({'Ba-140', 'Zr-95', 'La-140', 'Cs-137'})
