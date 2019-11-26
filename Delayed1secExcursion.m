@@ -1,4 +1,4 @@
-% 1000 second time span, 10 pcm reactivity excursion, including delayed N
+% 1 second time span, 10 pcm reactivity excursion, including delayed N
 
 % k effective [unitless]
 k=  1+10E-5
