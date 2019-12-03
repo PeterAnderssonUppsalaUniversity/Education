@@ -20,10 +20,10 @@ pu = pu/sum(pu);
 
 % Determining fraction of Pu / (U + Pu)  
 % Regards atomic fractions
-Pu_frac = 0.2;
+Pu_frac = 0; % 0.2;
 
-% Uranium enrichment - using natural urantium
-Uenrichment = 0.0072;
+% Uranium enrichment - using natural urantium - atomic enrichment
+Uenrichment = 0.2; % 0.0072;
 
 % uranium isototopes
 u235 = Uenrichment;
@@ -33,12 +33,12 @@ u= [u235;u238];
 % Creating vector of U + Pu
 Mix = [(1-Pu_frac)* u; pu*Pu_frac] ;
 
-% Ratio of NaCl dilutant Salt to Fuel
-SaltFuelRatio = 5;
+% Atomic ratio of NaCl dilutant Salt to Fuel, (NaCl) : (U+Pu)
+SaltFuelRatio = 3.5;
 % Half of salt each for Na and Cl, however, Cl contribution from fuel UCl3
 % and PuCl3
-Na = SaltFuelRatio*.5;
-Cl = SaltFuelRatio*.5 + 3;
+Na = SaltFuelRatio;
+Cl = SaltFuelRatio + 3;
 
 % Creating total fuel salt mixture
 FuelSalt = [Na;Cl;Mix];
@@ -48,7 +48,7 @@ FuelSalt = FuelSalt/sum(FuelSalt)
 % Printing
 nuclides = {'11023.09c' , '17035.09c' ,'92235.09c ', '92238.09c ', '94238.09c ',  '94239.09c ', '94240.09c ', '94241.09c ',  '94242.09c ' };
 fir = fopen(filename, 'w')
-formatSpec = '%s %8.3f\n'
+formatSpec = '%s %8.4f\n'
 for i = 1:length(FuelSalt);
     fprintf(fir, formatSpec, nuclides{i}, FuelSalt(i))
 end
