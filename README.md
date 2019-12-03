@@ -19,3 +19,7 @@ This includes reactor dynamics for neutron and precursor population, and conside
 NatCirc.m 
 This file computes the passive cooling equillibrium temperature of the coolant, where pressure drop in the core equates the buoyancy pressure from the heat expansion of the hot leg as compared to the cold leg. Uses optionally Na or Pb coolant. 
 
+
+MakeMixedSaltFuel.m
+Creates the nuclide concentrations for Serpent input material card for a MSR fuel salt. The salt contains dilutant NaCl, UCl3 and PuCl3 of certain fractions. 
+Output is printed to text file
