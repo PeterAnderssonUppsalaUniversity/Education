@@ -29,7 +29,7 @@ Uenrichment = 0.2; % 0.0072;
 u235 = Uenrichment;
 u238 = 1-Uenrichment;
 u= [u235;u238];
-
+ 
 % Creating vector of U + Pu
 Mix = [(1-Pu_frac)* u; pu*Pu_frac] ;
 
