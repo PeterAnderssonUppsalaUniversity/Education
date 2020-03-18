@@ -35,8 +35,8 @@ T2 = 10;
 % Rate of which intensive health care is required
 IntensiveRate = 0.03;
 
-% Rate of death per infected
-FatalityRate = 0.02 
+% Rate of death per infected (if treated)
+FatalityRate = 0.008 
 
 % Capacity of healthcare (beds with ventillators)
 Cap = 200;
