@@ -72,13 +72,3 @@ COV = A - B*inv(C) * B';
 for i = 1:length(xs)
     err(i) = COV(i,i).^.5;
 end
-
-figure
-hold on
-errorbar(xk,yk, ok, 'r*')
-plot( xs, M, 'k')
-plot( xs, M+err', 'k--')
-plot( xs, M-err', 'k--')
-
-
-legend({'True model', 'Known data', 'Fitted mean', 'Upper 1 sigma bound', 'Lower 1 sigma bound'})
