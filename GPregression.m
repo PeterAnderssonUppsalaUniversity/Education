@@ -12,7 +12,7 @@ function [M, err] = GPregression(xk, yk, ok, xs, kernel , hyperparam)
 % Kernel choices:
 %
 %  kernel       function                 hyperparams
-%  1            squared exponential      length scale = l
+%  1            squared exponential      length scale = l, Amplitude, A
 %
 % only one kernel yet...
 %
@@ -25,9 +25,10 @@ function [M, err] = GPregression(xk, yk, ok, xs, kernel , hyperparam)
 switch kernel
     case 1
         %length scale
-        l = hyperparam;
+        l = hyperparam(1);
+        A = hyperparam(2);
         % kernel 
-        K = @(x1, x2) exp(-  (x1-x2).^2 / (2* l^2));
+        K = @(x1, x2) A^2* exp(-  (x1-x2).^2 / (2* l^2));
     otherwise 
         error('Kernel value can so far only be "1"')
 end
@@ -40,7 +41,7 @@ for i = 1:length(xk)
     for j = 1:length(xk)
         C(j,i) = K(xk(i), xk(j));
         if i==j
-        C(j,i) = (1+ok(i)*ok(j))*K(xk(i), xk(j));
+        C(j,i) = (1+ok(i)*ok(j)  )*K(xk(i), xk(j));
         end
         %C(j,i) = K(xk(i), xk(j));
     end
@@ -51,13 +52,16 @@ end
 for i = 1:length(xs) 
     for j = 1:length(xs)
         A(j,i) = K(xs(i), xs(j));
+         if i==j
+            A(j,i) = (1   )*K(xs(i), xs(j));
+        end
     end
 end
 
 %cov B
 for i = 1:length(xk) 
     for j = 1:length(xs)
-        B(j,i) = K(xk(i), xs(j));
+        B(j,i) =  K(xk(i), xs(j));
          
     end
 end
@@ -65,10 +69,14 @@ end
 
 
 % prediction mean
-M =  B*inv(C) * (yk'  ) ;
+M =   mean(yk) + B*inv(C) * (yk' - mean(yk)  ) ;
+
+%M =   B*inv(C) * (yk'  ) ;
+
 
 % prediction covariance
-COV = A - B*inv(C) * B';
+COV = (A) - B*inv(C) * B';
 for i = 1:length(xs)
     err(i) = COV(i,i).^.5;
 end
+
