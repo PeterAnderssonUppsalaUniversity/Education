@@ -1,0 +1,324 @@
+A simple reactor Monte Carlo simulation to evaluate K_eff of a bare sphere reactor
+
+  
+Settings
+Let's define some parameters in a MATLAB live script for our reactor system, a sphere of uranium-235.
+% Settings of U235 sphere
+Rsphere = 7.95 ; % [cm]
+density = 18.86; %[g/cm3]
+A = 235;
+Numdens = density * 6.022E23 / A;
+
+% Settings for Monte Catlo evaluation of k
+NGEN=20;        % number of generations (total)
+NSKIP = 5;     % number of generations to skip
+NPG = 4000;     % Numer of neutrons per generation
+
+We consider a "universe" consisting only of uranium-235, inside a sphere with radius Rsphere, and nothing outside of this. This is a simple case.
+
+
+Reading and plotting cross section data 
+For this simple example, we consider only the material u-235, and we consider only the three possible interactions of elastic scattering, radiative capture and fission. This simplifies a little bit.
+Data can be collected from online databases of evaluated nuclear data:  https://www-nds.iaea.org/exfor/endf.htm
+
+% Reading fission cross section from ENDF data in saved txt-files
+fir = fopen('u235fis.txt', 'r');
+test = textscan(fir, '%f %f');
+u235fis=[test{1}, test{2} ] ;
+inds =[];  
+fclose( fir) ;
+% removing duplicate energy data points
+for i = 2:length(u235fis) , 
+    if u235fis(i,1) <= u235fis(i-1,1) , 
+        inds=[inds; i];  
+    end 
+end
+u235fis(inds, :) = [];
+
+
+% Reading radiative capture cross section
+fir = fopen('u235cap.txt', 'r');
+test = textscan(fir, '%f %f');
+u235cap=[test{1}, test{2} ] ;
+inds =[];  
+for i = 2:length(u235cap) , 
+    if u235cap(i,1) <= u235cap(i-1,1) , 
+        inds=[inds; i];  
+    end 
+end
+u235cap(inds, :) = [];
+fclose( fir) ;
+
+
+% Reading elastic scattering cross sections
+fir = fopen('u235el_scat.txt', 'r');
+test = textscan(fir, '%f %f');
+u235el_scat=[test{1}, test{2} ] ;
+inds =[];  
+for i = 2:length(u235el_scat) , 
+    if u235el_scat(i,1) <= u235el_scat(i-1,1) , 
+        inds=[inds; i];  
+    end
+end
+u235el_scat(inds, :) = [];
+fclose( fir) ;
+
+
+% Reading energy dependent fission neutron yield
+fir = fopen('u235nu_bar.txt', 'r');
+test = textscan(fir, '%f %f');
+u235nu_bar=[test{1}, test{2} ] ;
+fclose( fir) ;
+
+% Plotting cross sections and nu_bar
+figure
+semilogx(u235nu_bar(:,1) , u235nu_bar(:,2))
+xlabel('Neutron energy [MeV]')
+ylabel('Neutrons per fission')
+figure
+loglog(u235fis(:,1) , u235fis(:,2))
+hold on 
+loglog(u235cap(:,1) , u235cap(:,2))
+loglog(u235el_scat(:,1) , u235el_scat(:,2))
+xlabel('Neutron energy [MeV]')
+ylabel('Cross section [b]')
+legend({'Fission', 'Capture', 'Elastic Scattering'})
+
+
+
+%Making macroscopic cross sections
+u235cap(:,2) = u235cap(:,2) * Numdens*1E-24;
+u235fis(:,2) = u235fis(:,2) * Numdens*1E-24;
+u235el_scat(:,2) = u235el_scat(:,2) * Numdens*1E-24;
+
+Fission energy distribution
+Using the Watt distribution
+
+% sampling from Watt distribution
+P = @(E) 0.4865*sinh( sqrt(2*E)) .*exp(-E);
+
+Estep = 1E-5; %[MeV]
+E = Estep:Estep:10; 
+
+
+ProbabilityDensity = P(E);
+
+%normalizing PDF
+ProbabilityDensity = ProbabilityDensity / sum(ProbabilityDensity );
+
+% cumulative density function
+cumP = cumsum(ProbabilityDensity);
+figure
+
+plot(E, ProbabilityDensity/Estep)
+xlabel('Energy [MeV]')
+ylabel('P(E)')
+
+
+hold on
+sample = rand(1E5,1);
+Etest = interp1(cumP, E, sample  );
+[a,b]= hist(Etest, [1E-2:1E-2:10]);
+bar(b,a/sum(a) /1E-2)
+plot(E, ProbabilityDensity/Estep,'b')
+
+
+
+Running Monte Carlo
+
+
+
+% for simplicity, starting original neutrons in origo, preallocating
+xyz=zeros(NPG,3);
+xyz_ny= zeros(NPG,3);
+
+% preallocating k_eff
+K_eff = zeros(NGEN,1);
+
+
+Running loop for all our generations of neutrons
+  
+  % Tracking for <NGEN> generations
+for i = 1:NGEN
+    disp(['Generation: ',num2str(i),' of ',num2str(NGEN)])
+    
+    NumNeuts_ny = 0;
+    % preallocating
+    
+    
+Running loop for all neutrons of one generation
+    % Tracking the individual neutron
+    for j = 1:NPG
+        
+       
+        
+        % starting energy from Watt dist.
+        energy = interp1( cumP, E, rand(1));
+        
+        % starting position
+        pos = xyz(j,:);
+        
+        % random direction
+        dir = rand(1,3)-[0.5,0.5,0.5] ; 
+        dirsize = sqrt(sum( dir'.^2)' );
+        dir = dir./dirsize;
+        
+        % starting clock
+        t=0;
+        
+        % evaluating total Macr cross section
+        cross_sec_cap = interp1(u235cap(:,1),u235cap(:,2), energy);
+        cross_sec_fis = interp1(u235fis(:,1),u235fis(:,2), energy);
+        cross_sec_scat = interp1(u235el_scat(:,1),u235el_scat(:,2), energy);
+        cross_sec_total =  cross_sec_cap + cross_sec_fis+ cross_sec_scat;
+        nu_bar = interp1(u235nu_bar(:,1),u235nu_bar(:,2), energy);
+        
+        %mean free path
+        lambda = cross_sec_total.^-1;
+        
+        
+The mean free path is an average, the true distance travelled in a medium follows the exponential distribution, where:
+
+Matlab has built-in functions to sample random numbers from exponential distributions (exprnd)
+        %sampling random distance to interaction
+        dist = exprnd(lambda) ;
+        
+        % speed of flight
+        v= (2*(energy*1E6*1.6E-19) / 1.674E-27)^.5;
+        
+        %time of arrival at destination
+        t = t+dist/100/v;
+        
+        % New position
+        pos = pos + dir .* dist;
+    
+        % position in radial coordinate
+        R =sqrt(sum(pos'.^2)');
+        
+        % determine if escaped
+        if R > Rsphere
+           escaped = 1;
+        else
+            escaped = 0;
+        end
+        
+        % random number between 0 and 1
+        samp = rand();
+        
+        % determine sampled collision type
+        if samp < cross_sec_scat / cross_sec_total
+            ColType = 1; % elastic scattering
+        else
+            if samp < (cross_sec_scat + cross_sec_fis) / cross_sec_total
+                ColType = 2 ; % fission
+            else
+                ColType = 3; % Capture
+            end
+        end
+       
+        
+While loop below continues as long as we have scattering and ends only when the neutron is "killed"
+        % while inside sphere and scattered
+        while ColType == 1 && escaped == 0
+            
+            %scattering - new energy and direction please
+            energy = energy * ( A-1)^2/(A-1)^2;
+            dir = rand(1,3)-[0.5,0.5,0.5] ;
+            dirsize = sqrt(sum( dir'.^2)' );
+            dir = dir./dirsize;
+            
+            % new cross sections and data stuff, please
+            cross_sec_cap = interp1(u235cap(:,1),u235cap(:,2), energy);
+            cross_sec_fis = interp1(u235fis(:,1),u235fis(:,2), energy);
+            cross_sec_scat = interp1(u235el_scat(:,1),u235el_scat(:,2), energy);
+            cross_sec_total =  cross_sec_cap + cross_sec_fis+ cross_sec_scat;
+            nu_bar = interp1(u235nu_bar(:,1),u235nu_bar(:,2), energy);
+            lambda = cross_sec_total.^-1;
+            
+            % new position
+            dist = exprnd(lambda) ;
+            v= (2*(energy*1E6*1.6E-19) / 1.674E-27)^.5;
+            t = t+dist/100/v;
+            pos = pos + dir .* dist;
+            R =sqrt(sum(pos'.^2)');
+            
+            
+            % determine if escaped
+            if R > Rsphere
+                escaped = 1;
+            else
+                escaped = 0;
+            end
+            
+            % random number between 0 and 1
+            samp = rand();
+            
+            % determine sampled collision type
+            if samp < cross_sec_scat / cross_sec_total
+                ColType = 1; % elastic scattering
+            else
+                if samp < (cross_sec_scat + cross_sec_fis) / cross_sec_total
+                    ColType = 2 ; % fission
+                else
+                    ColType = 3; % Capture
+                end
+            end
+            
+            
+            
+        end
+        
+        % Once leaving while loop above, the neutron must have died by fission, capture or escape
+        
+        % next possibility, if not scattered - maybe it fissioned
+        if escaped == 0 && ColType==2
+            % fission
+            %time=[time;t];
+            for k = 1:poissrnd(nu_bar)
+                NumNeuts_ny=NumNeuts_ny+1;
+                xyz_ny(NumNeuts_ny,:) =  pos; %
+                
+                % Above we created positions of a number of new fission neutrons for next cycle  
+            end
+        end 
+        
+        % Note that we have two more possibilites that don't need to be handled, 
+        % escape or capture don't generate any new neutrons, we just let them go without action
+        % we don't need them for anything, otherwise we could treat those here
+    end
+    
+    % Creating locations of next generation neutrons and saving number of K_eff trial results
+    
+    if NumNeuts_ny > NPG
+        xyz =xyz_ny(1:NPG,:);
+    else
+        % Using the new neutrons that we have
+        xyz(1:NumNeuts_ny,:)= xyz_ny(1:NumNeuts_ny,:);
+        % And reusing some to rach NGP neutrons in total...
+        xyz(NumNeuts_ny+1:end,:)= xyz_ny( 1:(NPG-NumNeuts_ny),:);
+        
+    end
+
+    K_eff(i) = NumNeuts_ny / NPG; 
+end
+   
+
+
+Plotting the results on neutron population and computing k_eff 
+What do we get? Let's plot the number of neutrons per cycle.
+%% plotting results
+figure 
+plot(K_eff)
+xlabel('cycle')
+ylabel('K_{eff}')
+Evaluating k_eff by using the average of our active cycles:
+% evaluating average K_eff based on the active NGEN
+k_eff = mean(K_eff(NSKIP+1:end) )
+
+K_eff_error = std(K_eff(NSKIP+1:end) ) / sqrt( NGEN-NSKIP) 
+
+
+V = 4*pi*Rsphere^3/3;
+mass = density*V/1000
+
+Did we get criticality, k = 1? Otherwise we can try to increase the radius and try again...
